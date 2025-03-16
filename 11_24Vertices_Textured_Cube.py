@@ -2,6 +2,7 @@ import pyglet
 from pyglet.gl import *
 from pyglet.graphics.shader import Shader, ShaderProgram
 from pyglet.math import Mat4, Vec3
+from pyglet.window import key, mouse
 
 window = pyglet.window.Window(width=1200, height=720, caption="3D Textured Cube", resizable=True)
 window.set_location(400, 200)
@@ -10,11 +11,7 @@ glEnable(GL_DEPTH_TEST)
 
 # Load texture image
 texture = pyglet.image.load('Textures/t1.jpg').get_texture()
-# Enable texture repeat if needed
-glBindTexture(GL_TEXTURE_2D, texture.id)
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT)
-glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT)
-glBindTexture(GL_TEXTURE_2D, 0)
+
 
 # Updated vertex shader for texture coordinates
 vertex_source = """
@@ -59,14 +56,13 @@ project_Mat = Mat4.perspective_projection(aspect=1.6666, z_near=0.1, z_far=100)
 vp = project_Mat @ view_Math
 program['vp'] = vp
 
-# 3D Transformations
-cube_Translate = Mat4.from_translation(vector=Vec3(x=0, y=0, z=-2))
-cube_Rotate = Mat4.from_rotation(angle=1, vector=Vec3(x=0, y=1, z=0))
+# Initialize cube position and transformations - using regular values instead of Vec3
+cube_x = 0
+cube_y = 0
+cube_z = -2
+rotation_y = 0
+rotation_x = 0
 cube_Scale = Mat4.from_scale(vector=Vec3(x=2, y=2, z=2))
-
-# Combine the transformation matrices
-model_Math = cube_Translate @ cube_Rotate @ cube_Scale
-program['model'] = model_Math
 
 # Define the cube vertices (24 vertices - 4 per face)
 vertices = (
@@ -146,7 +142,6 @@ colors = (
     150, 150, 150, 255,  # 23: light gray
 )
 
-
 tex_coords = (
     # Front face
     0.0, 0.0,
@@ -218,17 +213,68 @@ cube = program.vertex_list_indexed(24, GL_TRIANGLES,
 # Set the texture in the shader
 program['tex'] = 0  # Texture unit 0
 
-# Animation variables
-angle = 5
+# Keyboard movement controls
+direction = {"left": False, "right": False, "up": False, "down": False,"Auto_Rotate":False}
+movement_speed = 5
+
+@window.event
+def on_key_press(symbol: int, modifiers: int):
+    if symbol == key.LEFT or symbol == key.A:
+        direction["left"] = True
+    if symbol == key.RIGHT or symbol == key.D:
+        direction["right"] = True
+    if symbol == key.UP or symbol == key.W:
+        direction["up"] = True
+    if symbol == key.DOWN or symbol == key.S:
+        direction["down"] = True
+    if symbol == key.SPACE:
+        direction["Auto_Rotate"] = True
+
+@window.event
+def on_key_release(symbol: int, modifiers: int):
+    if symbol == key.LEFT or symbol == key.A:
+        direction["left"] = False
+    if symbol == key.RIGHT or symbol == key.D:
+        direction["right"] = False
+    if symbol == key.UP or symbol == key.W:
+        direction["up"] = False
+    if symbol == key.DOWN or symbol == key.S:
+        direction["down"] = False
+
+
+
+@window.event
+def on_mouse_press(x: int, y: int, button: int, modifiers: int) -> None:
+    if button == mouse.LEFT:
+        direction["Auto_Rotate"] = False
+
+
 
 
 def update(dt):
-    global angle
-    angle += dt
+    global cube_x, cube_y, cube_z, rotation_x, rotation_y
 
-    # Update rotation
-    Rotate_y = Mat4.from_rotation(angle=angle, vector=Vec3(x=0, y=1, z=0))
-    Rotate_x = Mat4.from_rotation(angle=angle * 0.7, vector=Vec3(x=1, y=0, z=0))
+    # Handle keyboard input for movement
+    if direction["left"]:
+        cube_x -= movement_speed * dt
+    if direction["right"]:
+        cube_x += movement_speed * dt
+    if direction["up"]:
+        cube_y += movement_speed * dt
+    if direction["down"]:
+        cube_y -= movement_speed * dt
+
+    # Update rotation if auto-rotate is enabled
+    if direction["Auto_Rotate"]:
+        rotation_y += dt * 2
+        rotation_x += dt * 2
+
+    # Create the transformation matrices
+    cube_Translate = Mat4.from_translation(vector=Vec3(x=cube_x, y=cube_y, z=cube_z))
+    Rotate_y = Mat4.from_rotation(angle=rotation_y, vector=Vec3(x=0, y=1, z=0))
+    Rotate_x = Mat4.from_rotation(angle=rotation_x, vector=Vec3(x=1, y=0, z=0))
+
+    # Combine the transformation matrices
     model_Math = cube_Translate @ Rotate_y @ Rotate_x @ cube_Scale
     program['model'] = model_Math
 
@@ -236,10 +282,9 @@ def update(dt):
 @window.event
 def on_draw():
     window.clear()
-    glActiveTexture(GL_TEXTURE0)
-    glBindTexture(GL_TEXTURE_2D, texture.id)
+    # glBindTexture(GL_TEXTURE_2D, texture.id)
     batch.draw()
-    glBindTexture(GL_TEXTURE_2D, 0)
+
 
 
 # Schedule the update function
