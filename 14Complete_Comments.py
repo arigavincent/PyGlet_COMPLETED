@@ -228,7 +228,8 @@ program['tex'] = 0  # Use texture unit 0
 # Input handling
 # Dictionary to track which direction keys are being pressed
 direction = {"left": False, "right": False, "up": False, "down": False, "Auto_Rotate": False, "zoom_in": False,
-             "zoom_out": False}
+             "zoom_out": False,
+             "rotate_x": False, "rotate_y": False, "rotate_z": False, "reset_rotation": False}
 movement_speed = 5  # Movement speed factor
 
 
@@ -258,6 +259,16 @@ def on_key_press(symbol: int, modifiers: int):
     if symbol == key.MINUS or symbol == key.UNDERSCORE:
         direction["zoom_out"] = True
 
+    # Rotation control keys
+    if symbol == key.R:
+        direction["reset_rotation"] = True
+    if symbol == key.X:
+        direction["rotate_x"] = True
+    if symbol == key.Y:
+        direction["rotate_y"] = True
+    if symbol == key.Z:
+        direction["rotate_z"] = True
+
 
 # Handle key release events
 @window.event
@@ -283,9 +294,20 @@ def on_key_release(symbol: int, modifiers: int):
     if symbol == key.MINUS or symbol == key.UNDERSCORE:
         direction["zoom_out"] = False
 
+    # Rotation control key releases
+    if symbol == key.R:
+        direction["reset_rotation"] = False
+    if symbol == key.X:
+        direction["rotate_x"] = False
+    if symbol == key.Y:
+        direction["rotate_y"] = False
+    if symbol == key.Z:
+        direction["rotate_z"] = False
+
+
 
 # Mouse input handling
-# TODO 6: Add more mouse interaction controls (zoom, pan)
+
 @window.event
 def on_mouse_press(x: int, y: int, button: int, modifiers: int) -> None:
     if button == mouse.LEFT:
@@ -293,12 +315,14 @@ def on_mouse_press(x: int, y: int, button: int, modifiers: int) -> None:
 
 
 # Update function called every frame to handle animation and movement
-# TODO 7: Improve movement
+
 def update(dt):
 
         #dt (float): Time elapsed since last update in seconds
 
-    global cube_x, cube_y, cube_z, rotation_x, rotation_y, zoom_level
+    global cube_x, cube_y, cube_z, rotation_x, rotation_y, zoom_level,rotation_z
+
+
 
     # Process movement input - adjust cube position based on key presses
     if direction["left"]:
@@ -316,20 +340,37 @@ def update(dt):
     if direction["zoom_out"]:
         zoom_level = max(0.1, zoom_level - zoom_speed)  # Decrease zoom (make cube smaller), but not below 0.1
 
+        # Reset rotation if R key is pressed
+        if direction["reset_rotation"]:
+            rotation_x = 0
+            rotation_y = 0
+            rotation_z = 0
+
+        # Handle manual rotation with X, Y, Z keys
+        rotation_speed = 2  # Adjust this value to control rotation speed
+
+        if direction["rotate_x"]:
+            rotation_x += dt * rotation_speed
+        if direction["rotate_y"]:
+            rotation_y += dt * rotation_speed
+        if direction["rotate_z"]:
+            rotation_z += dt * rotation_speed
+
     # Handle auto-rotation
     if direction["Auto_Rotate"]:
         rotation_y += dt * 2  # Rotate around y-axis (horizontal)
         rotation_x += dt * 2  # Rotate around x-axis (vertical)
 
-    # Update transformation matrices
-    # These matrices define how the cube is transformed in 3D space
-    cube_Translate = Mat4.from_translation(vector=Vec3(x=cube_x, y=cube_y, z=cube_z))
-    Rotate_y = Mat4.from_rotation(angle=rotation_y, vector=Vec3(x=0, y=1, z=0))
-    Rotate_x = Mat4.from_rotation(angle=rotation_x, vector=Vec3(x=1, y=0, z=0))
-    # Apply zoom level to scale matrix
-    cube_Scale = Mat4.from_scale(vector=Vec3(x=2 * zoom_level, y=2 * zoom_level, z=2 * zoom_level))
-    model_Math = cube_Translate @ Rotate_y @ Rotate_x @ cube_Scale
-    program['model'] = model_Math
+        # Update transformation matrices
+        cube_Translate = Mat4.from_translation(vector=Vec3(x=cube_x, y=cube_y, z=cube_z))
+        Rotate_y = Mat4.from_rotation(angle=rotation_y, vector=Vec3(x=0, y=1, z=0))
+        Rotate_x = Mat4.from_rotation(angle=rotation_x, vector=Vec3(x=1, y=0, z=0))
+        # Add Z-axis rotation
+        Rotate_z = Mat4.from_rotation(angle=rotation_z, vector=Vec3(x=0, y=0, z=1))
+
+        # Update model matrix to include Z rotation
+        model_Math = cube_Translate @ Rotate_y @ Rotate_x @ Rotate_z @ cube_Scale
+        program['model'] = model_Math
 
 
 @window.event
