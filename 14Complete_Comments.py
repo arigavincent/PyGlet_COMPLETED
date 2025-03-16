@@ -6,14 +6,14 @@ from pyglet.window import key, mouse
 
 # Window initialization
 # Creates a resizable window with a specific title, dimensions, and position
-# TODO 1: Add window configuration options (fullscreen, vsync, etc.)
+#Add window configuration options (fullscreen, vsync, etc.)
 window = pyglet.window.Window(width=1200, height=720, caption="3D Textured Cube", resizable=True)
 window.set_location(400, 200)  # Position the window on the screen
 batch = pyglet.graphics.Batch()  # Create a batch for efficient rendering of multiple objects
 glEnable(GL_DEPTH_TEST)  # Enable depth testing so closer objects render on top of further ones
 
 # Load texture for the cube
-# TODO 2: Implement proper texture loading error handling
+# Implement proper texture loading error handling
 texture = pyglet.image.load('Textures/t1.jpg').get_texture()  # Load image and convert to OpenGL texture
 
 # GLSL Shaders define how vertices are processed (vertex shader) and pixels are colored (fragment shader)
@@ -53,7 +53,6 @@ void main() {
 """
 
 # Compile shaders and create shader program
-# TODO 3: Add shader compilation error checking
 vertex_Shader = Shader(vertex_source, "vertex")
 frag_Shader = Shader(fragment_source, "fragment")
 program = ShaderProgram(vertex_Shader, frag_Shader)  # Combine shaders into a program
@@ -67,11 +66,12 @@ vp = project_Mat @ view_Math  # Combine into view-projection matrix
 program['vp'] = vp  # Send to shader as uniform
 
 # Object position and orientation variables
-# TODO 4: Create a proper camera class for better movement control
+
 cube_x = 0  # Cube x position
 cube_y = 0  # Cube y position
 cube_z = -2  # Cube z position (2 units into the screen)
 rotation_y = 0  # Rotation around y-axis (in radians)
+rotation_z=0
 rotation_x = 0  # Rotation around x-axis (in radians)
 cube_Scale = Mat4.from_scale(vector=Vec3(x=2, y=2, z=2))  # Scale cube to twice its original size
 
@@ -214,7 +214,6 @@ indices = [
 ]
 
 # Create the cube mesh by sending vertex data to GPU
-# TODO 5: Refactor mesh creation into reusable function
 cube = program.vertex_list_indexed(24, GL_TRIANGLES,  # 24 vertices, drawing triangles
                                    indices,  # How vertices connect
                                    batch=batch,  # Add to rendering batch
@@ -230,7 +229,7 @@ program['tex'] = 0  # Use texture unit 0
 direction = {"left": False, "right": False, "up": False, "down": False, "Auto_Rotate": False, "zoom_in": False,
              "zoom_out": False,
              "rotate_x": False, "rotate_y": False, "rotate_z": False, "reset_rotation": False}
-movement_speed = 5  # Movement speed factor
+movement_speed = 5# Movement speed factor
 
 
 # Handle key press events
@@ -315,14 +314,13 @@ def on_mouse_press(x: int, y: int, button: int, modifiers: int) -> None:
 
 
 # Update function called every frame to handle animation and movement
-
 def update(dt):
+    """Update function called every frame to handle animation and movement
 
-        #dt (float): Time elapsed since last update in seconds
-
-    global cube_x, cube_y, cube_z, rotation_x, rotation_y, zoom_level,rotation_z
-
-
+    Args:
+        dt (float): Time elapsed since last update in seconds
+    """
+    global cube_x, cube_y, cube_z, rotation_x, rotation_y, zoom_level, rotation_z
 
     # Process movement input - adjust cube position based on key presses
     if direction["left"]:
@@ -340,37 +338,40 @@ def update(dt):
     if direction["zoom_out"]:
         zoom_level = max(0.1, zoom_level - zoom_speed)  # Decrease zoom (make cube smaller), but not below 0.1
 
-        # Reset rotation if R key is pressed
-        if direction["reset_rotation"]:
-            rotation_x = 0
-            rotation_y = 0
-            rotation_z = 0
+    # Reset rotation if R key is pressed
+    if direction["reset_rotation"]:
+        rotation_x = 0
+        rotation_y = 0
+        rotation_z = 0
 
-        # Handle manual rotation with X, Y, Z keys
-        rotation_speed = 2  # Adjust this value to control rotation speed
+    # Handle manual rotation with X, Y, Z keys
+    rotation_speed = 2  # Adjust this value to control rotation speed
 
-        if direction["rotate_x"]:
-            rotation_x += dt * rotation_speed
-        if direction["rotate_y"]:
-            rotation_y += dt * rotation_speed
-        if direction["rotate_z"]:
-            rotation_z += dt * rotation_speed
+    if direction["rotate_x"]:
+        rotation_x += dt * rotation_speed
+    if direction["rotate_y"]:
+        rotation_y += dt * rotation_speed
+    if direction["rotate_z"]:
+        rotation_z += dt * rotation_speed
 
     # Handle auto-rotation
     if direction["Auto_Rotate"]:
         rotation_y += dt * 2  # Rotate around y-axis (horizontal)
         rotation_x += dt * 2  # Rotate around x-axis (vertical)
 
-        # Update transformation matrices
-        cube_Translate = Mat4.from_translation(vector=Vec3(x=cube_x, y=cube_y, z=cube_z))
-        Rotate_y = Mat4.from_rotation(angle=rotation_y, vector=Vec3(x=0, y=1, z=0))
-        Rotate_x = Mat4.from_rotation(angle=rotation_x, vector=Vec3(x=1, y=0, z=0))
-        # Add Z-axis rotation
-        Rotate_z = Mat4.from_rotation(angle=rotation_z, vector=Vec3(x=0, y=0, z=1))
+    # Update transformation matrices
+    cube_Translate = Mat4.from_translation(vector=Vec3(x=cube_x, y=cube_y, z=cube_z))
+    Rotate_y = Mat4.from_rotation(angle=rotation_y, vector=Vec3(x=0, y=1, z=0))
+    Rotate_x = Mat4.from_rotation(angle=rotation_x, vector=Vec3(x=1, y=0, z=0))
+    # Add Z-axis rotation
+    Rotate_z = Mat4.from_rotation(angle=rotation_z, vector=Vec3(x=0, y=0, z=1))
 
-        # Update model matrix to include Z rotation
-        model_Math = cube_Translate @ Rotate_y @ Rotate_x @ Rotate_z @ cube_Scale
-        program['model'] = model_Math
+    # Apply zoom to scale
+    zoom_Scale = Mat4.from_scale(vector=Vec3(x=2 * zoom_level, y=2 * zoom_level, z=2 * zoom_level))
+
+    # Update model matrix to include Z rotation and zoom
+    model_Math = cube_Translate @ Rotate_y @ Rotate_x @ Rotate_z @ zoom_Scale
+    program['model'] = model_Math
 
 
 @window.event
