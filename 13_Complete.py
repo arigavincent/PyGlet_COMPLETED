@@ -266,7 +266,7 @@ def update(dt):
     model_Math = cube_Translate @ Rotate_y @ Rotate_x @ cube_Scale
     program['model'] = model_Math
 
-# TODO 8: Add FPS counter and performance monitoring
+
 @window.event
 def on_draw():
     window.clear()
